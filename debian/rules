@@ -1,0 +1,33 @@
+#!/usr/bin/make -f
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/ant.mk
+
+PACKAGE              := $(DEB_SOURCE_PACKAGE)
+VERSION              := $(DEB_UPSTREAM_VERSION)
+JAVA_HOME            := /usr/lib/jvm/default-java
+DEB_ANT_BUILD_TARGET := dist
+DEB_JARS             := commons-logging log4j-1.2 excalibur-logkit avalon-framework servlet-api-3.1 junit ant-junit
+DEB_INSTALL_CHANGELOGS_ALL := RELEASE-NOTES.txt
+
+makebuilddir/lib$(PACKAGE)-java::
+	# copy MANIFEST.MF to src/main/resources/META-INF/ to include it in the jar
+	install -d src/main/resources/META-INF/
+	install -m644 src/main/conf/MANIFEST.MF src/main/resources/META-INF/
+
+binary-post-install/$(PACKAGE)::
+	mh_installpoms -p$(PACKAGE) -e$(VERSION)
+	mh_installjar -p$(PACKAGE) -e$(VERSION) -l pom.xml \
+	  target/commons-logging-$(VERSION).jar
+	mh_installjar -p$(PACKAGE) -e$(VERSION) -l debian/pom-api.xml \
+	  target/commons-logging-api-$(VERSION).jar
+	# commons-logging-adapters has no POM
+	dh_install target/commons-logging-adapters-$(VERSION).jar usr/share/java
+	dh_link usr/share/java/commons-logging-adapters-$(VERSION).jar usr/share/java/commons-logging-adapters.jar
+
+clean::
+	mh_clean
+
+get-orig-source:
+	-uscan --download-current-version --force-download --rename --repack --compression xz
+
